@@ -1,6 +1,6 @@
 // AD-7 — the registration screen's reducer (SCR-1). One state machine holds the four
-// visitor fields; submission and error display land with their stories.
-import { registrationInput, type RegistrationInput } from '@app/shared'
+// visitor fields and the errors of a stopped Submit (ST-3); submission lands with its story.
+import { normalise, registrationInput, type RegistrationInput } from '@app/shared'
 
 /** The four visitor fields, in tab order. */
 export const fieldNames = ['firstName', 'lastName', 'email', 'phone'] as const
@@ -16,7 +16,11 @@ export interface FormState {
 }
 
 export type FormAction =
-  { type: 'change'; field: FieldName; value: string } | { type: 'submit' } | { type: 'submitted' } | { type: 'failed'; errors: FieldErrors }
+  | { type: 'change'; field: FieldName; value: string }
+  | { type: 'submit' }
+  | { type: 'submitted' }
+  | { type: 'failed'; errors: FieldErrors }
+  | { type: 'invalid'; errors: FieldErrors }
 
 export const initialState: FormState = {
   values: { firstName: '', lastName: '', email: '', phone: '' },
@@ -27,6 +31,8 @@ export const initialState: FormState = {
 export function reducer(state: FormState, action: FormAction): FormState {
   switch (action.type) {
     case 'change':
+      // Typing only spaces leaves the field as empty as before (AC-2), so its message stays.
+      if (normalise(action.value) === '') return { ...state, values: { ...state.values, [action.field]: action.value } }
       return { ...state, values: { ...state.values, [action.field]: action.value }, errors: { ...state.errors, [action.field]: undefined } }
     case 'submit':
       return { ...state, submitting: true, errors: {} }
@@ -34,6 +40,9 @@ export function reducer(state: FormState, action: FormAction): FormState {
       return { ...state, submitting: false }
     case 'failed':
       return { ...state, submitting: false, errors: action.errors }
+    case 'invalid':
+      // A Submit stopped by an empty field (ST-3): the values stay, only the errors change.
+      return state.submitting ? state : { ...state, errors: action.errors }
     default:
       return state
   }
