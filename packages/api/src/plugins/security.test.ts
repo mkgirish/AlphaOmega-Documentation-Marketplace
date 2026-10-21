@@ -174,16 +174,27 @@ describe('error envelopes never echo the request', () => {
     expectHardened(res.headers)
   })
 
-  it('never echoes a submitted value on an unknown route', async () => {
-    const res = await withProbeRoutes().inject({
+  it('never echoes a submitted value on an unknown route or the registrations route', async () => {
+    const probe = withProbeRoutes()
+    const unknown = await probe.inject({
       method: 'POST',
-      url: `/api/registrations?email=${encodeURIComponent(SENTINEL)}`,
+      url: `/api/unknown?email=${encodeURIComponent(SENTINEL)}`,
       headers: { 'content-type': 'application/json' },
       payload: JSON.stringify({ email: SENTINEL }),
     })
-    expect(res.statusCode).toBe(404)
-    expect(res.json()).toEqual({ error: { message: 'Not found.' } })
-    expect(res.body).not.toContain(SENTINEL)
+    expect(unknown.statusCode).toBe(404)
+    expect(unknown.json()).toEqual({ error: { message: 'Not found.' } })
+    expect(unknown.body).not.toContain(SENTINEL)
+    // ST-8 adds POST /api/registrations: its 400 names the failing fields, never their values.
+    const registration = await probe.inject({
+      method: 'POST',
+      url: `/api/registrations?email=${encodeURIComponent(SENTINEL)}`,
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ fullName: SENTINEL, email: SENTINEL, phone: SENTINEL }),
+    })
+    expect(registration.statusCode).toBe(400)
+    expect(registration.body).not.toContain(SENTINEL)
+    expectHardened(registration.headers)
   })
 })
 

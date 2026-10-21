@@ -3,7 +3,7 @@
   "info": {
     "title": "Visitor Registration API",
     "version": "0.0.0",
-    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
+    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. ST-8: POST /api/registrations with the US phone rule. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
   },
   "paths": {
     "/": {
@@ -154,6 +154,74 @@
           }
         }
       }
+    },
+    "/api/registrations": {
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Record a visitor registration. Nothing is stored unless every field passes; the phone is stored as its ten digits.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored. The body carries no submitted value and no row id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field failed its rule (one entry per field in error.fields), or the body could not be read; nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is larger than 16 KiB; nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not application/json; nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The registration could not be stored; no detail is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -205,6 +273,53 @@
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      },
+      "RegistrationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fullName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "phone": {
+            "type": "string",
+            "description": "A 10-digit US number without +1, bare or written as (415) 555-0132, 415.555.0132 or 415-555-0132; area code and exchange start with 2-9."
+          }
+        }
+      },
+      "Created": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "createdAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "description": "UTC seconds, formatted by formatUtcSeconds()."
               }
             }
           }
