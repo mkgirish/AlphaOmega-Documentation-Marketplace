@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/* SCR-1 palette: Tailwind's default colours are dropped; every pairing is checked for WCAG
+   2.1 AA contrast in palette.test.ts. */
+@theme {
+  --color-*: initial;
+  --color-page: #f4f1ea;
+  --color-card: #ffffff;
+  --color-ink: #1b2430;
+  --color-muted: #4a5563;
+  --color-line: #6b7480;
+  --color-accent: #1f4e8c;
+  --color-on-accent: #ffffff;
+  --color-focus: #a3420d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
