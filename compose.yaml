@@ -1,0 +1,54 @@
+# docker compose up baseline for the visitor registration application.
+#
+# The ADR-001 baseline trio (postgres, keycloak, otel-collector) is kept running and
+# unused as SQ-1 answered — nothing connects to them yet. registration-api (SVC-4) is
+# the one AD-11 image; shared-rules (SVC-5) rebuilds the shared package on change.
+#
+# POSTGRES_PASSWORD comes from the gitignored .env (SQ-7); it is never inlined here.
+
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    # Baseline only; the app does not connect to it (CMP-4 runs as CMP-3's child).
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev
+    # Baseline only; no realm seeded (AD-13, AQ-3).
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    # Baseline only; CMP-5 writes to stdout, nothing is exported (AD-14, AQ-4).
+
+  registration-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # The base image has no curl; probe with node's built-in fetch from inside.
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  shared-rules:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    command: npx tsc --build --watch packages/shared
+    # CMP-2 is a library with no process; locally it rebuilds so rule changes reach
+    # packages/web and packages/api during development (SQ-4).
