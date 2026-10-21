@@ -22,6 +22,6 @@ describe('shared registration rules (scaffold baseline)', () => {
 
   it('wraps data and errors in the AD-5 envelopes', () => {
     expect(envelope({ ok: true })).toEqual({ data: { ok: true } })
-    expect(errorEnvelope(messages.invalidEmail)).toEqual({ error: { message: 'Enter a valid email address.' } })
+    expect(errorEnvelope(messages.invalidEmail)).toEqual({ error: { message: 'Enter an email like name@example.com.' } })
   })
 })
