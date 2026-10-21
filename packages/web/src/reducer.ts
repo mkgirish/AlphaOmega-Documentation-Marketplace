@@ -1,22 +1,25 @@
-// AD-7 — the registration screen's reducer (SCR-1). Scaffold baseline: a minimal form
-// state machine over the shared rules; the story fleshes out fields, submission and
-// error display.
+// AD-7 — the registration screen's reducer (SCR-1). One state machine holds the four
+// visitor fields; submission and error display land with their stories.
 import { registrationInput, type RegistrationInput } from '@app/shared'
 
+/** The four visitor fields, in tab order. */
+export const fieldNames = ['firstName', 'lastName', 'email', 'phone'] as const
+
+export type FieldName = (typeof fieldNames)[number]
+
+export type FieldErrors = Partial<Record<FieldName, string>>
+
 export interface FormState {
-  readonly values: RegistrationInput
-  readonly errors: Partial<Record<keyof RegistrationInput, string>>
+  readonly values: Readonly<Record<FieldName, string>>
+  readonly errors: FieldErrors
   readonly submitting: boolean
 }
 
 export type FormAction =
-  | { type: 'change'; field: keyof RegistrationInput; value: string }
-  | { type: 'submit' }
-  | { type: 'submitted' }
-  | { type: 'failed'; errors: Partial<Record<keyof RegistrationInput, string>> }
+  { type: 'change'; field: FieldName; value: string } | { type: 'submit' } | { type: 'submitted' } | { type: 'failed'; errors: FieldErrors }
 
 export const initialState: FormState = {
-  values: { fullName: '', email: '' },
+  values: { firstName: '', lastName: '', email: '', phone: '' },
   errors: {},
   submitting: false,
 }

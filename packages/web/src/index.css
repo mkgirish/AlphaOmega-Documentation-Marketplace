@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+/* SCR-1 palette — the same tokens as src/palette.ts, contrast-checked there. The default
+   Tailwind colours are dropped so nothing off-palette can slip in. */
+@theme {
+  --color-*: initial;
+  --color-canvas: #eef1f5;
+  --color-surface: #ffffff;
+  --color-ink: #17202e;
+  --color-muted: #475164;
+  --color-edge: #66707f;
+  --color-primary: #1f4fa3;
+  --color-primary-strong: #183d80;
+  --color-on-primary: #ffffff;
+  --color-focus: #9a3f00;
+}
