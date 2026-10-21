@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+package-lock.json
+contracts/IF-2.json
+packages/api/openapi.json
+playwright-report
+test-results

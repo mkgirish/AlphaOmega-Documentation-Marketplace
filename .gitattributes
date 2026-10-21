@@ -1,0 +1,14 @@
+# Keep line endings deterministic across hosts so scripts that run inside Linux
+# containers never acquire CRLF (a CRLF shebang makes the kernel look for `bash\r`).
+* text=auto eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

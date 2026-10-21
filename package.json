@@ -1,0 +1,49 @@
+{
+  "name": "alphaomega-registration",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Visitor registration application — monorepo skeleton (Step 10 scaffold).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/shared",
+    "packages/api",
+    "packages/web"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "test:e2e": "node scripts/gates/playwright.mjs",
+    "scan": "node scripts/gates/scan.mjs",
+    "check:trace": "node scripts/gates/check-trace.mjs",
+    "test:axe": "node scripts/gates/test-axe.mjs",
+    "check:keyboard-pass": "node scripts/gates/check-keyboard-pass.mjs",
+    "test:contracts": "node scripts/gates/test-contracts.mjs",
+    "openapi": "node scripts/gates/openapi.mjs",
+    "check:migrations": "node scripts/gates/check-migrations.mjs",
+    "scan:image": "node scripts/gates/scan-image.mjs",
+    "mock:if-2": "prism mock contracts/IF-2.json --port 4010"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.49.1",
+    "@stoplight/prism-cli": "^5.14.2",
+    "@types/node": "^20.17.10",
+    "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^2.1.8",
+    "drizzle-kit": "^0.30.1",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  }
+}
