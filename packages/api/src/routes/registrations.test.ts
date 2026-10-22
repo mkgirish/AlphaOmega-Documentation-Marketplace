@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import type { FastifyInstance } from 'fastify'
-import { afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildApp } from '../main.js'
 import type { RegistrationRecord, RegistrationRepository } from '../persistence/repository.js'
 
@@ -23,6 +23,18 @@ const UNREADABLE = { error: { message: 'The request could not be read.' } }
 const EXPECTED_CSP =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; " +
   "connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
+
+// The app logs through observability's logger; point it at a capture buffer so the tests
+// can read every line the app writes.
+const logLines: string[] = vi.hoisted(() => [])
+vi.mock('../observability/index.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../observability/index.js')>()
+  const write = (level: string) => (obj: unknown, msg?: string) => {
+    const fields = typeof obj === 'object' && obj !== null ? obj : {}
+    logLines.push(JSON.stringify({ level, ...fields, msg: typeof obj === 'string' ? obj : msg }))
+  }
+  return { ...original, logger: { info: write('info'), warn: write('warn'), error: write('error') } }
+})
 
 class SpyRepository implements RegistrationRepository {
   readonly inserted: RegistrationRecord[] = []
@@ -280,6 +292,18 @@ function violations(value: unknown, raw: Schema, at = '$'): string[] {
   }
 }
 
+async function postWithFailingRepository(payload: unknown = VALID) {
+  app = buildApp({
+    webRoot: NO_WEB_ROOT,
+    repository: {
+      insert: async () => {
+        throw new Error(`database said: ${SENTINEL}`)
+      },
+    },
+  })
+  return app.inject({ method: 'POST', url: '/api/registrations', payload: payload as Record<string, unknown> })
+}
+
 describe('POST /api/registrations honours the committed openapi.json @story:ST-3 @criterion:AC-6', () => {
   const operation = (): Operation | undefined => openapi.paths['/api/registrations']?.post
 
@@ -299,8 +323,9 @@ describe('POST /api/registrations honours the committed openapi.json @story:ST-3
     ['400 malformed JSON', '{', 'application/json', 400],
     ['413 too large', { ...VALID, firstName: 'x'.repeat(20_000) }, 'application/json', 413],
     ['415 wrong type', 'firstName=Jane', 'text/plain', 415],
+    ['500 repository failure', VALID, 'application/json', 500],
   ] as const)('%s is a documented status with a conforming body', async (_name, payload, contentType, status) => {
-    const res = await post(payload, contentType)
+    const res = status === 500 ? await postWithFailingRepository() : await post(payload, contentType)
     expect(res.statusCode).toBe(status)
     const documented = operation()?.responses[String(status)]?.content?.['application/json']
     expect(documented, `POST /api/registrations ${status} documented`).toBeDefined()
@@ -311,5 +336,51 @@ describe('POST /api/registrations honours the committed openapi.json @story:ST-3
     expect(operation()?.responses['500']?.content?.['application/json']?.schema).toEqual({
       $ref: '#/components/schemas/ErrorEnvelope',
     })
+  })
+})
+
+describe('other methods and logs never carry a submitted value @story:ST-3 @criterion:AC-6', () => {
+  it('GET /api/registrations answers the standard error envelope with no submitted value', async () => {
+    app = buildApp({ webRoot: NO_WEB_ROOT, repository: new SpyRepository() })
+    const res = await app.inject({ method: 'GET', url: `/api/registrations?firstName=${SENTINEL}` })
+    expect(res.statusCode).toBeGreaterThanOrEqual(400)
+    expect(res.statusCode).toBeLessThan(500)
+    const body = res.json()
+    expect(Object.keys(body)).toEqual(['error'])
+    expect(typeof body.error.message).toBe('string')
+    expect(res.body).not.toContain(SENTINEL)
+  })
+
+  it.each([
+    [201, VALID],
+    [413, { ...VALID, firstName: 'x'.repeat(20_000) }],
+  ])('a %i answers cache-control: no-store', async (status, payload) => {
+    const res = await post(payload)
+    expect(res.statusCode).toBe(status)
+    expect(res.headers['cache-control']).toBe('no-store')
+  })
+
+  it('a 415 answers cache-control: no-store', async () => {
+    const res = await post('firstName=Jane', 'text/plain')
+    expect(res.statusCode).toBe(415)
+    expect(res.headers['cache-control']).toBe('no-store')
+  })
+
+  it('logs only known events for a blank-field 400, a 415 and a repository 500, never a value', async () => {
+    const payload = Object.fromEntries(FIELDS.map((f) => [f, `${SENTINEL}-${f}`]))
+    logLines.length = 0
+    const blank = await post({ ...payload, firstName: ' ' })
+    const wrongType = await post(`firstName=${SENTINEL}-firstName`, 'application/x-www-form-urlencoded')
+    const failed = await postWithFailingRepository(payload)
+    expect([blank.statusCode, wrongType.statusCode, failed.statusCode]).toEqual([400, 415, 500])
+
+    const entries = logLines.map((line) => JSON.parse(line) as { msg?: string })
+    // Only the storage failure is an event; refusals are expected outcomes and stay silent.
+    expect(entries.map((e) => e.msg)).toEqual(['request.failed'])
+    expect(entries[0]).toMatchObject({ code: 'unknown' })
+    for (const line of logLines) {
+      expect(line).not.toContain('SENTINEL-')
+      expect(line).not.toContain(SENTINEL)
+    }
   })
 })

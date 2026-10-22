@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import type { FastifyInstance } from 'fastify'
 import pg from 'pg'
@@ -7,10 +6,9 @@ import { buildApp } from '../main.js'
 import type { RegistrationRecord, RegistrationRepository } from '../persistence/repository.js'
 
 // ST-3 AC-1, AC-2 and AC-6 against a real PostgreSQL: a refused POST leaves the
-// registrations row count unchanged. Each run gets its own schema built from the committed
+// registrations row count unchanged. Each run rebuilds the fixed st3_registrations schema built from the committed
 // migration and dropped afterwards. Skips cleanly when CI provides no database.
 const DATABASE_URL = process.env.AGENTX_TEST_DATABASE_URL
-const SCHEMA = `st3_${randomBytes(6).toString('hex')}`
 const VALID = { firstName: 'Jane', lastName: 'Doe', email: 'jane.doe@example.com', phone: '4155550132' } as const
 
 let pool: pg.Pool
@@ -37,8 +35,9 @@ function post(payload: unknown) {
 
 describe.skipIf(DATABASE_URL === undefined)('the registrations row count @story:ST-3', () => {
   beforeAll(async () => {
-    pool = new pg.Pool({ connectionString: DATABASE_URL, max: 2, options: `-c search_path=${SCHEMA}` })
-    await pool.query(`CREATE SCHEMA ${SCHEMA}`)
+    pool = new pg.Pool({ connectionString: DATABASE_URL, max: 2, options: '-c search_path=st3_registrations' })
+    await pool.query('DROP SCHEMA IF EXISTS st3_registrations CASCADE')
+    await pool.query('CREATE SCHEMA st3_registrations')
     await pool.query(readFileSync(new URL('../../drizzle/0000_init.sql', import.meta.url), 'utf8'))
     app = buildApp({ webRoot: '/nonexistent-web-root', repository: new TableRepository() })
     await app.ready()
@@ -46,7 +45,7 @@ describe.skipIf(DATABASE_URL === undefined)('the registrations row count @story:
 
   afterAll(async () => {
     await app?.close()
-    await pool?.query(`DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE`)
+    await pool?.query('DROP SCHEMA IF EXISTS st3_registrations CASCADE')
     await pool?.end()
   })
 
