@@ -7,6 +7,8 @@ export interface Config {
   readonly host: string
   /** The built registration screen (packages/web/dist), served from the same origin. */
   readonly webRoot: string
+  /** PostgreSQL holding registrations; unset, the screen is served and POSTs answer 500. */
+  readonly databaseUrl?: string
 }
 
 // src/ and dist/ both sit one level under packages/api, so this resolves to
@@ -18,5 +20,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: env.PORT ? Number(env.PORT) : 3000,
     host: env.HOST ?? '0.0.0.0',
     webRoot: DEFAULT_WEB_ROOT,
+    ...(env.DATABASE_URL ? { databaseUrl: env.DATABASE_URL } : {}),
   }
 }
