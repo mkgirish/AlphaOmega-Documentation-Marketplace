@@ -73,6 +73,9 @@ export const securityServerOptions = {
 } as const
 
 export function registerSecurity(app: FastifyInstance): void {
+  // The API reads JSON only; any other body type is refused with 415 before a handler runs.
+  app.removeContentTypeParser('text/plain')
+
   app.addHook('onRequest', async (_request, reply) => {
     reply.headers(SECURITY_HEADERS)
   })
