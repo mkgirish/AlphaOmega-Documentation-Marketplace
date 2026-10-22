@@ -23,6 +23,8 @@ export interface FormState {
   readonly submitting: boolean
   /** The first name the API answered 201 with; blank in every other state. */
   readonly firstName: string
+  /** True when Submit was stopped on the screen for an empty field (ST-3); the summary box shows only then. */
+  readonly blocked?: boolean
 }
 
 export type FormAction =
@@ -30,6 +32,7 @@ export type FormAction =
   | { type: 'submit' }
   | { type: 'submitted'; firstName?: string }
   | { type: 'failed'; errors: FieldErrors }
+  | { type: 'blocked'; errors: FieldErrors }
   | { type: 'saveFailed' }
   | { type: 'reset' }
 
@@ -50,7 +53,7 @@ export function reducer(state: FormState, action: FormAction): FormState {
       return { ...state, values: { ...state.values, [action.field]: action.value }, errors: { ...state.errors, [action.field]: undefined } }
     case 'submit':
       if (!editable(state.status)) return state
-      return { ...state, status: 'submitting', submitting: true, errors: {} }
+      return { ...state, status: 'submitting', submitting: true, errors: {}, blocked: undefined }
     case 'submitted':
       if (state.status !== 'submitting') return state
       return { ...initialState, status: 'confirmed', firstName: action.firstName ?? '' }
@@ -59,6 +62,9 @@ export function reducer(state: FormState, action: FormAction): FormState {
       const flagged = Object.values(action.errors).some(Boolean)
       return { ...state, status: flagged ? 'invalid' : 'saveFailed', submitting: false, errors: action.errors }
     }
+    case 'blocked':
+      if (!editable(state.status)) return state
+      return { ...state, status: 'invalid', errors: action.errors, blocked: true }
     case 'saveFailed':
       if (state.status !== 'submitting') return state
       return { ...state, status: 'saveFailed', submitting: false, errors: {} }

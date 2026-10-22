@@ -1,5 +1,6 @@
 import { fields } from './fields.js'
 import type { FieldName, FormState } from './reducer.js'
+import { attentionSummary } from './required.js'
 
 // The palette's focus ring and touch-target sizes are shared by every control (AC-5, AC-6).
 const control = 'block w-full min-w-0 rounded-md focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus'
@@ -48,6 +49,7 @@ function Confirmation({ firstName, onReset }: { firstName: string; onReset: () =
 
 function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onReset'>) {
   const submitting = state.status === 'submitting'
+  const errorCount = state.blocked ? fields.filter((field) => state.errors[field.name]).length : 0
   return (
     <>
       <h1 id="registration-title" className="text-2xl font-semibold">
@@ -67,6 +69,11 @@ function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onRe
           onSubmit()
         }}
       >
+        {errorCount > 0 ? (
+          <div id="error-summary" role="alert" className="rounded-md border-l-4 border-focus bg-canvas px-4 py-3 font-medium">
+            {attentionSummary(errorCount)}
+          </div>
+        ) : null}
         {fields.map((field, index) => {
           const error = state.errors[field.name]
           const describedBy = [field.hint ? `${field.name}-hint` : '', error ? `${field.name}-error` : ''].filter(Boolean).join(' ')
