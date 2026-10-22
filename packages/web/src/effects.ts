@@ -1,9 +1,11 @@
 // SCR-1 — what the page does around a transition: the two fixed tab titles (never the
-// visitor's name, AC-6) and where focus lands, so it never falls back to <body>.
+// visitor's name, AC-6), where focus lands, so it never falls back to <body>, and what a
+// screen reader hears once the kiosk is cleared for the next visitor (ST-5).
+import { confirmation } from '@app/shared'
 import { fieldNames, type FormState, type Status } from './reducer.js'
 
 export function titleFor(status: Status): string {
-  return status === 'confirmed' ? 'Registration complete' : 'Visitor registration'
+  return status === 'confirmed' ? confirmation.pageTitle : 'Visitor registration'
 }
 
 /** The id of the element to focus after moving from `previous` to `next`, or null to leave focus where it is. */
@@ -13,4 +15,10 @@ export function focusTargetFor(previous: Status, next: FormState): string | null
   if (previous === 'confirmed') return 'firstName'
   if (next.status === 'invalid') return fieldNames.find((name) => next.errors[name]) ?? null
   return null
+}
+
+/** What the status region says after moving from `previous` to `next`: null keeps it as it is, '' silences it. */
+export function announcementFor(previous: Status, next: FormState): string | null {
+  if (previous === next.status) return null
+  return previous === 'confirmed' ? 'Form cleared for the next visitor' : ''
 }
