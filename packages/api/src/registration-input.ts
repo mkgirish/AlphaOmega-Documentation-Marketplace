@@ -3,7 +3,7 @@
 // email of at most 254 characters and a NANP number. The required and email messages come
 // from CMP-2; packages/shared has no four-field schema yet, so the remaining IF-2 rules
 // are kept here, in the one module the route uses.
-import { messages } from '@app/shared'
+import { messages, normalisePhone } from '@app/shared'
 
 export type RegistrationField = 'firstName' | 'lastName' | 'email' | 'phone'
 
@@ -27,8 +27,13 @@ const EMAIL_MAX = 254
 const FORBIDDEN = /[\p{Cc}\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u
 const EMAIL =
   /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
+// ST-3: whitespace, the invisible format characters (zero-width space, joiners, word joiner,
+// soft hyphen, BOM), marks with no base, the Hangul fillers and the braille blank. A value
+// made only of these reads as empty on screen, so it is refused as required rather than
+// stored as a blank-looking row. CMP-2 only trims; this rule belongs there once it can take it.
+const INVISIBLE = /[\s\p{Cf}\p{M}\u115F\u1160\u2800\u3164\uFFA0]/gu
 const PHONE_SEPARATORS = /[ .()-]/g
-const NANP = /^[2-9]\d{2}[2-9]\d{6}$/
+const TEN_DIGITS = /^\d{10}$/
 
 function nameRule(label: string) {
   return (value: string): string | null => {
@@ -54,8 +59,12 @@ const RULES: Readonly<
   phone: {
     label: 'Phone number',
     normalise: (v) => v.trim().replace(PHONE_SEPARATORS, ''),
-    check: (v) => (NANP.test(v) ? null : 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'),
+    check: (v) => (TEN_DIGITS.test(v) && normalisePhone(v) !== null ? null : 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'),
   },
+}
+
+function isBlank(value: string): boolean {
+  return value.replace(INVISIBLE, '') === ''
 }
 
 /** Validates and normalises a request body. Messages never contain a submitted value. */
@@ -70,7 +79,7 @@ export function parseRegistration(body: unknown): RegistrationParse {
     const rule = RULES[field]
     const raw = record[field]
     const normalised = typeof raw === 'string' ? rule.normalise(raw) : ''
-    const problem = normalised === '' ? messages.required(rule.label) : rule.check(normalised)
+    const problem = isBlank(normalised) ? messages.required(rule.label) : rule.check(normalised)
     if (problem === null) value[field] = normalised
     else fields[field] = [problem]
   }
