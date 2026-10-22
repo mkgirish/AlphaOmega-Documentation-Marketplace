@@ -10,11 +10,13 @@ export interface ScreenProps {
   readonly onChange: (field: FieldName, value: string) => void
   readonly onSubmit: () => void
   readonly onReset: () => void
+  /** The polite live region's text; undefined until a visitor has registered, so the first form is calm. */
+  readonly announcement?: string
 }
 
 // SCR-1 — the registration screen: one card holding either the four visitor fields and
 // Submit, or, once the API has answered 201, the confirmation in their place (ST-2).
-export function RegistrationScreen({ state, onChange, onSubmit, onReset }: ScreenProps) {
+export function RegistrationScreen({ state, onChange, onSubmit, onReset, announcement }: ScreenProps) {
   return (
     <main className="flex min-h-screen justify-center bg-canvas px-4 py-8 text-ink sm:items-center">
       <section id="registration-card" className="w-full max-w-[480px] rounded-xl border border-edge bg-surface p-6 sm:p-8">
@@ -22,6 +24,12 @@ export function RegistrationScreen({ state, onChange, onSubmit, onReset }: Scree
           <Confirmation firstName={state.firstName} onReset={onReset} />
         ) : (
           <RegistrationForm state={state} onChange={onChange} onSubmit={onSubmit} />
+        )}
+        {/* Rendered from the confirmation on, so the reset's text lands in a region the screen reader already watches. */}
+        {announcement === undefined ? null : (
+          <p id="announcement" role="status" className="sr-only">
+            {announcement}
+          </p>
         )}
       </section>
     </main>
@@ -46,7 +54,7 @@ function Confirmation({ firstName, onReset }: { firstName: string; onReset: () =
   )
 }
 
-function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onReset'>) {
+function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onReset' | 'announcement'>) {
   const submitting = state.status === 'submitting'
   return (
     <>
