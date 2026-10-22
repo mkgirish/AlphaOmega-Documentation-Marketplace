@@ -35,7 +35,10 @@ export const errorEnvelope = (message: string, fields?: { path: string; message:
   error: fields === undefined ? { message } : { message, fields },
 })
 
-/** Human-facing messages, kept here so the screen and the API agree. */
+/**
+ * Scaffold baseline messages. @deprecated Use fieldMessages and errorSummary(), which carry the
+ * ST-2 and ST-3 copy each field shows.
+ */
 export const messages = {
   required: (field: string) => `${field} is required.`,
   invalidEmail: 'Enter a valid email address.',
