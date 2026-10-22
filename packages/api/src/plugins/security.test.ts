@@ -177,7 +177,7 @@ describe('error envelopes never echo the request', () => {
   it('never echoes a submitted value on an unknown route', async () => {
     const res = await withProbeRoutes().inject({
       method: 'POST',
-      url: `/api/registrations?email=${encodeURIComponent(SENTINEL)}`,
+      url: `/api/unknown?email=${encodeURIComponent(SENTINEL)}`,
       headers: { 'content-type': 'application/json' },
       payload: JSON.stringify({ email: SENTINEL }),
     })
