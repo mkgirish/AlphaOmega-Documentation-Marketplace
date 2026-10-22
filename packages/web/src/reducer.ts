@@ -1,6 +1,6 @@
 // AD-7 — the registration screen's reducer (SCR-1). One state machine holds the four
-// visitor fields; submission and error display land with their stories.
-import { registrationInput, type RegistrationInput } from '@app/shared'
+// visitor fields and their errors; submission lands with its story.
+import { messages, normalise, registrationInput, type RegistrationInput } from '@app/shared'
 
 /** The four visitor fields, in tab order. */
 export const fieldNames = ['firstName', 'lastName', 'email', 'phone'] as const
@@ -26,8 +26,12 @@ export const initialState: FormState = {
 
 export function reducer(state: FormState, action: FormAction): FormState {
   switch (action.type) {
-    case 'change':
-      return { ...state, values: { ...state.values, [action.field]: action.value }, errors: { ...state.errors, [action.field]: undefined } }
+    case 'change': {
+      const values = { ...state.values, [action.field]: action.value }
+      // A flagged field is judged again as it is edited, so its message clears once it is fixed (ST-9 AC-4).
+      const error = fieldErrors(values)[action.field] === undefined ? undefined : state.errors[action.field]
+      return { ...state, values, errors: { ...state.errors, [action.field]: error } }
+    }
     case 'submit':
       return { ...state, submitting: true, errors: {} }
     case 'submitted':
@@ -37,6 +41,11 @@ export function reducer(state: FormState, action: FormAction): FormState {
     default:
       return state
   }
+}
+
+/** The screen's field errors under the shared rules (CMP-2): the email rule and its message (ST-9). */
+export function fieldErrors(values: FormState['values']): FieldErrors {
+  return registrationInput.shape.email.safeParse(normalise(values.email)).success ? {} : { email: messages.invalidEmail }
 }
 
 /** Validate the current values against the shared rules, mapping issues to field errors. */
