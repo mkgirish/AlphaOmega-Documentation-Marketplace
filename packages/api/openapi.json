@@ -3,7 +3,7 @@
   "info": {
     "title": "Visitor Registration API",
     "version": "0.0.0",
-    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
+    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. ST-3: POST /api/registrations refuses any blank or spaces-only field with 400 naming each one, and stores nothing. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
   },
   "paths": {
     "/": {
@@ -154,6 +154,74 @@
           }
         }
       }
+    },
+    "/api/registrations": {
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Record a visitor registration. Every field is trimmed first; a blank or spaces-only field is refused and nothing is stored.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored. The body carries only the UTC-seconds time; never a submitted value or the row id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is missing, not a string, blank or only spaces (error.fields names each one, in form order, with its message; error.message counts them), or the body is malformed JSON, not a JSON object, or carries a field other than the four (no error.fields). Nothing is stored and no submitted value is echoed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body exceeds 16 KiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not application/json.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected failure; no detail is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -205,6 +273,56 @@
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      },
+      "RegistrationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Blank after trimming answers 400 with 'Enter your first name.'"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Blank after trimming answers 400 with 'Enter your last name.'"
+          },
+          "email": {
+            "type": "string",
+            "description": "Blank after trimming answers 400 with 'Enter an email like name@example.com.'"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Blank after trimming answers 400 with 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'"
+          }
+        }
+      },
+      "RegistrationCreated": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "createdAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "description": "UTC seconds, formatted by formatUtcSeconds()."
               }
             }
           }
