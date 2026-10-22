@@ -1,11 +1,16 @@
 // CMP-2 — the single source of registration field rules, imported by packages/web and
 // packages/api (AD-2, AD-3). Scaffold baseline: real, minimal shapes the stories extend.
 import { z } from 'zod'
+import { invalidPhoneMessage, phoneSchema } from './phone.js'
+
+export { editPhone, formatPhoneAsTyped, isUsPhone, normalisePhone, phoneDigits, phoneSchema, type PhoneEdit } from './phone.js'
 
 /** The registration input rules. Stories tighten and extend these. */
 export const registrationInput = z.object({
   fullName: z.string().min(1).max(200),
   email: z.string().email().max(320),
+  /** Stored as its ten digits (ST-8). */
+  phone: phoneSchema.optional(),
 })
 
 export type RegistrationInput = z.infer<typeof registrationInput>
@@ -39,6 +44,7 @@ export const errorEnvelope = (message: string, fields?: { path: string; message:
 export const messages = {
   required: (field: string) => `${field} is required.`,
   invalidEmail: 'Enter a valid email address.',
+  invalidPhone: invalidPhoneMessage,
 } as const
 
 /** Trim and collapse internal whitespace before validating or storing. */
