@@ -51,3 +51,5 @@ export function formatUtcSeconds(at: Date | number): string {
   const ms = typeof at === 'number' ? at : at.getTime()
   return new Date(Math.floor(ms / 1000) * 1000).toISOString().replace('.000Z', 'Z')
 }
+
+export * from './registration.js'
