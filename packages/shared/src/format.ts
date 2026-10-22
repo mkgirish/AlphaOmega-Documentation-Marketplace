@@ -1,8 +1,8 @@
 // Value formatting shared by the rules and the API: whitespace and UTC timestamps.
 
-/** Trim and collapse internal whitespace before validating or storing. */
+/** Compose to NFC, trim and collapse internal whitespace before validating or storing. */
 export function normalise(value: string): string {
-  return value.trim().replace(/\s+/g, ' ')
+  return value.normalize('NFC').trim().replace(/\s+/g, ' ')
 }
 
 /** Format a Date (or epoch milliseconds) as whole UTC seconds, ISO-8601 with a Z. */
