@@ -27,6 +27,8 @@ const EMAIL_MAX = 254
 const FORBIDDEN = /[\p{Cc}\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u
 const EMAIL =
   /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
+// Invisible format characters (zero-width space, word joiner, BOM) cannot make a field filled.
+const INVISIBLE = /\p{Cf}/gu
 const PHONE_SEPARATORS = /[ .()-]/g
 const NANP = /^[2-9]\d{2}[2-9]\d{6}$/
 
@@ -70,7 +72,8 @@ export function parseRegistration(body: unknown): RegistrationParse {
     const rule = RULES[field]
     const raw = record[field]
     const normalised = typeof raw === 'string' ? rule.normalise(raw) : ''
-    const problem = normalised === '' ? messages.required(rule.label) : rule.check(normalised)
+    const empty = normalised.replace(INVISIBLE, '').trim() === ''
+    const problem = empty ? messages.required(rule.label) : rule.check(normalised)
     if (problem === null) value[field] = normalised
     else fields[field] = [problem]
   }
