@@ -3,7 +3,7 @@
   "info": {
     "title": "Visitor Registration API",
     "version": "0.0.0",
-    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
+    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. ST-9: the write-only POST /api/registrations, which applies the shared email rule. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
   },
   "paths": {
     "/": {
@@ -154,6 +154,74 @@
           }
         }
       }
+    },
+    "/api/registrations": {
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Record a visitor registration. Nothing submitted, and not the row id, is ever returned.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored; the receipt carries only the whole-second UTC time it was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationReceiptEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not a registration, or a field breaks its rule; fields lists one message per field and never echoes a value. Nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is larger than 16 KiB. Nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not application/json (text/plain included). Nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected failure, such as the database being unavailable; no detail is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -167,6 +235,54 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          }
+        }
+      },
+      "RegistrationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fullName",
+          "email"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Trimmed, with internal whitespace collapsed, before checking."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Trimmed, then local@domain.tld of at most 254 characters; otherwise 400 with \"Enter an email like name@example.com.\" for email."
+          }
+        }
+      },
+      "RegistrationReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "createdAt"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+            "description": "When the registration was stored, in whole UTC seconds."
+          }
+        }
+      },
+      "RegistrationReceiptEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RegistrationReceipt"
           }
         }
       },
