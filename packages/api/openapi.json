@@ -3,7 +3,7 @@
   "info": {
     "title": "Visitor Registration API",
     "version": "0.0.0",
-    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
+    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. ST-10: POST /api/registrations, the one write, holding each name to 100 characters. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
   },
   "paths": {
     "/": {
@@ -154,6 +154,74 @@
           }
         }
       }
+    },
+    "/api/registrations": {
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Record a visitor registration. Write-only: no operation reads, lists, updates or deletes registrations; GET, PUT, PATCH and DELETE answer the MethodNotAllowed response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded. The body carries only the whole-second UTC time; never the row id or a submitted value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not valid JSON, has a field that is not accepted, or breaks a field rule; fields lists each failing field with a fixed message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is larger than the limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not application/json.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The registration could not be stored; no detail is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -167,6 +235,64 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          }
+        }
+      },
+      "RegistrationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Accepted as written (apostrophes, hyphens, accents). Trimmed, with internal whitespace runs collapsed, then at most 100 characters (Unicode code points); control characters, invisible spaces and bidi overrides are refused."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Accepted as written (apostrophes, hyphens, accents). Trimmed, with internal whitespace runs collapsed, then at most 100 characters (Unicode code points); control characters, invisible spaces and bidi overrides are refused."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "At most 254 characters after trimming."
+          },
+          "phone": {
+            "type": "string",
+            "description": "A North American (NANP) number, optionally prefixed +1."
+          }
+        }
+      },
+      "RegistrationCreated": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "createdAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+                "description": "When it was recorded, in whole UTC seconds."
+              }
+            }
           }
         }
       },
@@ -214,6 +340,25 @@
     "responses": {
       "NotFound": {
         "description": "No such route or file.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "MethodNotAllowed": {
+        "description": "GET, PUT, PATCH or DELETE on /api/registrations: registrations are write-only.",
+        "headers": {
+          "Allow": {
+            "description": "Always POST.",
+            "schema": {
+              "type": "string",
+              "const": "POST"
+            }
+          }
+        },
         "content": {
           "application/json": {
             "schema": {
