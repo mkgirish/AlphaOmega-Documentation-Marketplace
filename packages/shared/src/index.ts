@@ -2,7 +2,7 @@
 // packages/api (AD-2, AD-3). Scaffold baseline: real, minimal shapes the stories extend.
 import { z } from 'zod'
 
-/** The registration input rules. Stories tighten and extend these. */
+/** Scaffold baseline rules. @deprecated Use registrationRequest, which holds the four ST-2 fields. */
 export const registrationInput = z.object({
   fullName: z.string().min(1).max(200),
   email: z.string().email().max(320),
@@ -41,13 +41,5 @@ export const messages = {
   invalidEmail: 'Enter a valid email address.',
 } as const
 
-/** Trim and collapse internal whitespace before validating or storing. */
-export function normalise(value: string): string {
-  return value.trim().replace(/\s+/g, ' ')
-}
-
-/** Format a Date (or epoch milliseconds) as whole UTC seconds, ISO-8601 with a Z. */
-export function formatUtcSeconds(at: Date | number): string {
-  const ms = typeof at === 'number' ? at : at.getTime()
-  return new Date(Math.floor(ms / 1000) * 1000).toISOString().replace('.000Z', 'Z')
-}
+export { formatUtcSeconds, normalise } from './format.js'
+export * from './registration.js'
