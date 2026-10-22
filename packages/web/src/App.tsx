@@ -1,14 +1,24 @@
-import { useReducer } from 'react'
+import { useLayoutEffect, useReducer, useRef } from 'react'
+import { control, Field } from './Field.js'
 import { fields } from './fields.js'
-import { initialState, reducer } from './reducer.js'
-
-// The palette's focus ring and touch-target sizes are shared by every control (AC-5, AC-6).
-const control = 'block w-full min-w-0 rounded-md focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus'
+import { changeHandler, phoneKeyDownHandler, restoreCaret, restoreFocus, type CaretRef } from './handlers.js'
+import { initialState, reducer, type FieldName } from './reducer.js'
+import { submitForm } from './submit.js'
 
 // SCR-1 — the registration screen as the kiosk opens it: one card, the four visitor fields
-// and Submit, nothing to navigate to. Submission lands with its story.
+// and Submit, nothing to navigate to. Submit flags an invalid phone (ST-8); sending lands with its story.
 export function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const inputs = useRef<Partial<Record<FieldName, HTMLInputElement | null>>>({})
+  const caret = useRef<number | null>(null) satisfies CaretRef
+  const focus = useRef<FieldName | null>(null)
+
+  // Once the render lands, put the caret back where the phone edit left it (ST-8 AC-6) and focus
+  // the field Submit flagged, so its error is rendered and described when focus arrives.
+  useLayoutEffect(() => {
+    restoreCaret(caret, inputs.current.phone)
+    restoreFocus(focus, inputs.current)
+  })
 
   return (
     <main className="flex min-h-screen justify-center bg-canvas px-4 py-8 text-ink sm:items-center">
@@ -25,33 +35,26 @@ export function App() {
           aria-describedby="registration-intro"
           autoComplete="off"
           noValidate
-          onSubmit={(event) => event.preventDefault()}
+          onSubmit={(event) => {
+            event.preventDefault()
+            submitForm(state.values, dispatch, (field) => {
+              focus.current = field
+            })
+          }}
         >
           {fields.map((field, index) => (
-            <div key={field.name} className="flex flex-col gap-1">
-              <label htmlFor={field.name} className="font-medium">
-                {field.label}
-              </label>
-              <input
-                id={field.name}
-                name={field.name}
-                type={field.type}
-                inputMode={field.inputMode}
-                autoComplete="off"
-                spellCheck={false}
-                autoFocus={index === 0}
-                required
-                aria-describedby={field.hint ? `${field.name}-hint` : undefined}
-                value={state.values[field.name]}
-                onChange={(event) => dispatch({ type: 'change', field: field.name, value: event.target.value })}
-                className={`${control} min-h-11 border border-edge bg-surface px-3 py-2 text-ink`}
-              />
-              {field.hint ? (
-                <p id={`${field.name}-hint`} className="text-sm text-muted">
-                  {field.hint}
-                </p>
-              ) : null}
-            </div>
+            <Field
+              key={field.name}
+              field={field}
+              value={state.values[field.name]}
+              error={state.errors[field.name]}
+              autoFocus={index === 0}
+              inputRef={(input) => {
+                inputs.current[field.name] = input
+              }}
+              onChange={changeHandler(field.name, dispatch, caret)}
+              onKeyDown={field.name === 'phone' ? phoneKeyDownHandler(dispatch, caret) : undefined}
+            />
           ))}
           <button
             type="submit"
