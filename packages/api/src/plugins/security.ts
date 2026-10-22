@@ -3,7 +3,7 @@
 import type { Socket } from 'node:net'
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { errorEnvelope } from '@app/shared'
-import { logger } from '../observability/index.js'
+import { logger as defaultLogger, type Logger } from '../observability/index.js'
 
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -35,6 +35,8 @@ export const NOT_FOUND = 'Not found.'
 
 const CLIENT_ERRORS: Readonly<Record<number, string>> = {
   400: 'The request could not be read.',
+  403: 'This request is not allowed.',
+  405: 'This method is not allowed.',
   413: 'The request is too large.',
   415: 'Unsupported content type.',
   431: 'The request headers are too large.',
@@ -72,7 +74,7 @@ export const securityServerOptions = {
   clientErrorHandler: rawClientError,
 } as const
 
-export function registerSecurity(app: FastifyInstance): void {
+export function registerSecurity(app: FastifyInstance, logger: Logger = defaultLogger): void {
   app.addHook('onRequest', async (_request, reply) => {
     reply.headers(SECURITY_HEADERS)
   })
