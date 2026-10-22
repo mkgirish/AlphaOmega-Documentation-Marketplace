@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useReducer, useRef } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { formClearedAnnouncement } from './announcement.js'
 import { focusTargetFor, titleFor } from './effects.js'
 import { initialState, reducer } from './reducer.js'
 import { RegistrationScreen } from './Screen.js'
@@ -10,6 +11,8 @@ export function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const submit = useMemo(() => createSubmit(dispatch), [])
   const previous = useRef(state.status)
+  const [cleared, setCleared] = useState(false)
+  const announcement = cleared ? formClearedAnnouncement : state.status === 'confirmed' ? '' : undefined
 
   useEffect(() => {
     document.title = titleFor(state.status)
@@ -21,9 +24,16 @@ export function App() {
   return (
     <RegistrationScreen
       state={state}
+      announcement={announcement}
       onChange={(field, value) => dispatch({ type: 'change', field, value })}
-      onSubmit={() => void submit(state)}
-      onReset={() => dispatch({ type: 'reset' })}
+      onSubmit={() => {
+        setCleared(false)
+        void submit(state)
+      }}
+      onReset={() => {
+        setCleared(true)
+        dispatch({ type: 'reset' })
+      }}
     />
   )
 }
