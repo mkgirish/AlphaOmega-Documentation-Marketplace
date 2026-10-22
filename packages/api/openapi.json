@@ -3,7 +3,7 @@
   "info": {
     "title": "Visitor Registration API",
     "version": "0.0.0",
-    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
+    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. ST-8: POST /api/registrations, which applies the US phone rule and never returns a submitted value or the row id. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
   },
   "paths": {
     "/": {
@@ -154,6 +154,74 @@
           }
         }
       }
+    },
+    "/api/registrations": {
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Record a visitor registration. Name and email are trimmed; the phone is stored as its ten NANP digits.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored. Only the whole-second UTC creation time is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body could not be read, has an unknown field, or a field failed its rule; fields lists each failing field once with its message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is larger than 16 KiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is sent with a content type the API does not read, such as a form.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The registration could not be stored; no detail is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -167,6 +235,56 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          }
+        }
+      },
+      "RegistrationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fullName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "phone": {
+            "type": "string",
+            "description": "A 10-digit US number without +1, e.g. (415) 555-0132; spaces, dots, dashes and brackets are ignored.",
+            "examples": [
+              "(415) 555-0132"
+            ]
+          }
+        }
+      },
+      "RegistrationCreated": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "createdAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "description": "UTC seconds, formatted by formatUtcSeconds()."
+              }
+            }
           }
         }
       },
