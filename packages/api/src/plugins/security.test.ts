@@ -177,13 +177,26 @@ describe('error envelopes never echo the request', () => {
   it('never echoes a submitted value on an unknown route', async () => {
     const res = await withProbeRoutes().inject({
       method: 'POST',
-      url: `/api/registrations?email=${encodeURIComponent(SENTINEL)}`,
+      url: `/api/visits?email=${encodeURIComponent(SENTINEL)}`,
       headers: { 'content-type': 'application/json' },
       payload: JSON.stringify({ email: SENTINEL }),
     })
     expect(res.statusCode).toBe(404)
     expect(res.json()).toEqual({ error: { message: 'Not found.' } })
     expect(res.body).not.toContain(SENTINEL)
+  })
+
+  it('never echoes a submitted value when POST /api/registrations refuses it @story:ST-2 @criterion:AC-5', async () => {
+    const res = await withProbeRoutes().inject({
+      method: 'POST',
+      url: `/api/registrations?email=${encodeURIComponent(SENTINEL)}`,
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ email: SENTINEL }),
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toMatchObject({ error: 'validation' })
+    expect(res.body).not.toContain(SENTINEL)
+    expectHardened(res.headers)
   })
 })
 
