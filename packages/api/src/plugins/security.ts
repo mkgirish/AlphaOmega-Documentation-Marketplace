@@ -33,10 +33,13 @@ const SECURITY_HEADERS: Readonly<Record<string, string>> = {
 
 export const NOT_FOUND = 'Not found.'
 
+export const UNREADABLE_REQUEST = 'The request could not be read.'
+export const UNSUPPORTED_TYPE = 'Unsupported content type.'
+
 const CLIENT_ERRORS: Readonly<Record<number, string>> = {
-  400: 'The request could not be read.',
+  400: UNREADABLE_REQUEST,
   413: 'The request is too large.',
-  415: 'Unsupported content type.',
+  415: UNSUPPORTED_TYPE,
   431: 'The request headers are too large.',
 }
 
