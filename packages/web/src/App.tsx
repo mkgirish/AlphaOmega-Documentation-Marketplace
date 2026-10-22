@@ -1,6 +1,8 @@
+import { flushSync } from 'react-dom'
 import { useEffect, useMemo, useReducer, useRef } from 'react'
 import { focusTargetFor, titleFor } from './effects.js'
 import { initialState, reducer } from './reducer.js'
+import { focusField, submitRegistration } from './required.js'
 import { RegistrationScreen } from './Screen.js'
 import { createSubmit } from './submit.js'
 
@@ -22,7 +24,11 @@ export function App() {
     <RegistrationScreen
       state={state}
       onChange={(field, value) => dispatch({ type: 'change', field, value })}
-      onSubmit={() => void submit(state)}
+      onSubmit={() => {
+        // Render the errors before moving focus, so the focused field already reads its message (ST-3).
+        if (submitRegistration(state.values, (action) => flushSync(() => dispatch(action)), focusField)) return
+        void submit(state)
+      }}
       onReset={() => dispatch({ type: 'reset' })}
     />
   )
