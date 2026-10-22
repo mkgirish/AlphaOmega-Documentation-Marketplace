@@ -3,7 +3,7 @@
   "info": {
     "title": "Visitor Registration API",
     "version": "0.0.0",
-    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
+    "description": "Committed OpenAPI document for CMP-3 (AD-4). Regenerated from the Fastify route schemas by `npm run openapi`; the openapi-regenerated gate proves this file matches. ST-1: the liveness probe, the registration screen and its bundle. ST-2: POST /api/registrations (IF-2), whose errors are application/problem+json AD-5 envelopes; any other method on that path answers 405 with Allow: POST. Every response carries the AD-16 security headers; any other route answers 404 with the NotFound envelope."
   },
   "paths": {
     "/": {
@@ -154,6 +154,186 @@
           }
         }
       }
+    },
+    "/api/registrations": {
+      "description": "POST is the only method this path serves (AD-5). Any other method on /api/registrations (GET, PUT, PATCH, DELETE and the rest) returns 405 with Allow: POST and Cache-Control: no-store, and never returns stored registrations. Any other path under /api returns 404 with Cache-Control: no-store. Neither is a route: both come from the AD-5 error handling, and ST-1 AC-3 checks them.",
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Register one visit",
+        "description": "Validates, normalises (NFC, trim, phone separators stripped) and inserts one row into registrations with created_at from formatUtcSeconds(). Duplicates are allowed (CON-9). Request body limit 4 KB. Rate limits: RATE_LIMIT_PER_IP_PER_MIN (default 30) and RATE_LIMIT_GLOBAL_PER_MIN (default 300).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Sec-Fetch-Site",
+            "in": "header",
+            "required": false,
+            "description": "A value of cross-site is refused with 403.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationRequest"
+              },
+              "example": {
+                "firstName": "Jane",
+                "lastName": "Doe",
+                "email": "jane.doe@example.com",
+                "phone": "(415) 555-0132"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved. The screen shows the confirmation only on this status.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationCreated"
+                },
+                "example": {
+                  "firstName": "Jane",
+                  "createdAt": "2026-10-20T14:03:27Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. fields lists CMP-2 messages per invalid field only; malformed JSON gives fields {}; an unknown property (e.g. id) is a validation failure. No row is written.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                },
+                "examples": {
+                  "phone": {
+                    "value": {
+                      "error": "validation",
+                      "fields": {
+                        "phone": [
+                          "Enter a 10-digit US number without +1, e.g. (415) 555-0132."
+                        ]
+                      }
+                    }
+                  },
+                  "malformed": {
+                    "value": {
+                      "error": "validation",
+                      "fields": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-site request (Sec-Fetch-Site: cross-site).",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "error": "forbidden"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body over 4 KB.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "error": "too_large"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type is not application/json.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "error": "unsupported_media_type"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-IP or global rate limit exceeded. The screen treats it as a failed save.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "error": "rate_limited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The store is unavailable (startup.db_unavailable, db.exited) or the insert failed (db.insert_failed). The screen shows the save-failed alert and keeps the values.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "error": "internal"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -209,6 +389,132 @@
             }
           }
         }
+      },
+      "RegistrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "1–100 code points after NFC and trim; no control or bidi characters."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "1–100 code points after NFC and trim; no control or bidi characters."
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "description": "ASCII local@domain.tld, at most 254 characters."
+          },
+          "phone": {
+            "type": "string",
+            "description": "After stripping spaces, dashes, dots and parentheses must match ^[2-9]\\d{2}[2-9]\\d{6}$; '+' or a leading country code is rejected."
+          }
+        }
+      },
+      "RegistrationCreated": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "createdAt"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "The normalised first name."
+          },
+          "createdAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+            "description": "UTC whole seconds from formatUtcSeconds()."
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "description": "RFC 9457 problem details; the AD-5 'error' code is an extension member and the only required one.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string",
+            "enum": [
+              "validation",
+              "forbidden",
+              "too_large",
+              "unsupported_media_type",
+              "rate_limited",
+              "internal"
+            ]
+          }
+        }
+      },
+      "ValidationProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "required": [
+              "error",
+              "fields"
+            ],
+            "properties": {
+              "error": {
+                "const": "validation"
+              },
+              "fields": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "firstName": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "lastName": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "email": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "phone": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "responses": {
@@ -220,6 +526,15 @@
               "$ref": "#/components/schemas/ErrorEnvelope"
             }
           }
+        }
+      }
+    },
+    "headers": {
+      "NoStore": {
+        "description": "Always no-store (AD-5, AD-22).",
+        "schema": {
+          "type": "string",
+          "const": "no-store"
         }
       }
     }
