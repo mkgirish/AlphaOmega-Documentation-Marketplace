@@ -10,6 +10,7 @@ export const palette = {
   'primary-strong': '#183d80',
   'on-primary': '#ffffff',
   focus: '#9a3f00',
+  danger: '#b3261e',
 } as const
 
 export type Token = keyof typeof palette
@@ -32,6 +33,8 @@ export const contrastPairs: readonly ContrastPair[] = [
   { fg: 'focus', bg: 'surface', min: 3 },
   { fg: 'focus', bg: 'canvas', min: 3 },
   { fg: 'primary', bg: 'surface', min: 3 },
+  { fg: 'danger', bg: 'surface', min: 4.5 },
+  { fg: 'danger', bg: 'canvas', min: 4.5 },
 ]
 
 const hexDigits = '0123456789abcdef'
