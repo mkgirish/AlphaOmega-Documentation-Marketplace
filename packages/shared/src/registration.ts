@@ -8,7 +8,7 @@ export const fieldLimits = {
   emailMax: 254,
 } as const
 
-/** Field-level messages. They name the rule, never the submitted value. */
+/** Field-level messages. They name the rule, never the submitted value; `required` is the ST-3 empty-field copy. */
 export const fieldMessages = {
   firstName: {
     required: 'Enter your first name.',
@@ -21,13 +21,14 @@ export const fieldMessages = {
     invalid: 'Last name contains characters that are not allowed.',
   },
   email: {
-    required: 'Enter your email address.',
+    required: 'Enter an email like name@example.com.',
     tooLong: `Email address must be ${fieldLimits.emailMax} characters or fewer.`,
     invalid: 'Enter a valid email address.',
   },
   phone: {
-    required: 'Enter your phone number.',
-    invalid: 'Enter a 10-digit US or Canadian phone number.',
+    required: 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.',
+    // IF-2 gives the same guidance for a number that is present but not a NANP number.
+    invalid: 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.',
   },
 } as const
 
