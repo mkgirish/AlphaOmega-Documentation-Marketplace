@@ -210,7 +210,7 @@
             }
           },
           "400": {
-            "description": "Validation failed. fields lists CMP-2 messages per invalid field only; malformed JSON gives fields {}; an unknown property (e.g. id) is a validation failure. No row is written.",
+            "description": "Validation failed. A field that is missing, not a string or blank after trimming gets the message the screen shows under it. fields lists CMP-2 messages per invalid field only; malformed JSON gives fields {}; an unknown property (e.g. id) is a validation failure. No row is written.",
             "headers": {
               "Cache-Control": {
                 "$ref": "#/components/headers/NoStore"
@@ -222,6 +222,16 @@
                   "$ref": "#/components/schemas/ValidationProblem"
                 },
                 "examples": {
+                  "blank": {
+                    "value": {
+                      "error": "validation",
+                      "fields": {
+                        "lastName": [
+                          "Enter your last name."
+                        ]
+                      }
+                    }
+                  },
                   "phone": {
                     "value": {
                       "error": "validation",
