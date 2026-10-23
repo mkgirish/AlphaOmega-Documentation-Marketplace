@@ -43,3 +43,4 @@ export const messages = {
 
 export { formatUtcSeconds, normalise } from './format.js'
 export * from './registration.js'
+export * from './required.js'
