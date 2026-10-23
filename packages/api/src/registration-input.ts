@@ -33,7 +33,7 @@ const EMAIL =
   /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
 const PHONE_MESSAGE = 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'
 const PHONE_SEPARATORS = /[ .()-]/g
-const NANP = /^[2-9]\d{2}[2-9]\d{6}$/
+const NANP = /^[2-9][0-9]{2}[2-9][0-9]{6}$/
 
 function nameRule(label: string) {
   return (value: string): string | null => {
