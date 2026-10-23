@@ -21,7 +21,7 @@ export interface DataEnvelope<T> {
   data: T
 }
 
-/** AD-5 error envelope. */
+/** AD-5 error envelope. @deprecated POST /api/registrations refuses with problemEnvelopeSchema (ST-11). */
 export interface ErrorEnvelope {
   error: {
     message: string
@@ -43,3 +43,4 @@ export const messages = {
 
 export { formatUtcSeconds, normalise } from './format.js'
 export * from './registration.js'
+export * from './rejection.js'
