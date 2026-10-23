@@ -22,15 +22,16 @@ jobs:
           cache: npm
       - run: npm ci
       - id: affected
-        # On a pull request, judge only the workspaces this part changed; on push to the base branch, the whole repo.
+        # On a pull request, scope the per-package gates to the directories this part changed; otherwise the whole repo.
         run: |
+          PATHS=.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch --no-tags origin "${{ github.base_ref }}"
             CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | awk -F/ '/^(packages|testing)\//{print $1"/"$2}' | sort -u)
-            FLAGS=""; for p in $CHANGED; do FLAGS="$FLAGS --workspace $p"; done
-            echo "ws=$FLAGS" >> "$GITHUB_OUTPUT"
+            if [ -n "$CHANGED" ]; then PATHS=$(echo $CHANGED); fi
           fi
-      - run: npm test ${{ steps.affected.outputs.ws }}
+          echo "paths=$PATHS" >> "$GITHUB_OUTPUT"
+      - run: npm test -- ${{ steps.affected.outputs.paths }}
   coverage-at-90:
     # Every package the change touches holds 90% line and branch coverage, measured per package (rule 5)
     name: coverage-at-90
@@ -45,15 +46,16 @@ jobs:
           cache: npm
       - run: npm ci
       - id: affected
-        # On a pull request, judge only the workspaces this part changed; on push to the base branch, the whole repo.
+        # On a pull request, scope the per-package gates to the directories this part changed; otherwise the whole repo.
         run: |
+          PATHS=.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch --no-tags origin "${{ github.base_ref }}"
             CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | awk -F/ '/^(packages|testing)\//{print $1"/"$2}' | sort -u)
-            FLAGS=""; for p in $CHANGED; do FLAGS="$FLAGS --workspace $p"; done
-            echo "ws=$FLAGS" >> "$GITHUB_OUTPUT"
+            if [ -n "$CHANGED" ]; then PATHS=$(echo $CHANGED); fi
           fi
-      - run: npm test ${{ steps.affected.outputs.ws }} -- --coverage
+          echo "paths=$PATHS" >> "$GITHUB_OUTPUT"
+      - run: npm test -- --coverage ${{ steps.affected.outputs.paths }}
   lint-and-types-clean:
     # ESLint, Prettier and tsc --noEmit pass with nothing suppressed that the change added (rule 21)
     name: lint-and-types-clean
@@ -68,16 +70,18 @@ jobs:
           cache: npm
       - run: npm ci
       - id: affected
-        # On a pull request, judge only the workspaces this part changed; on push to the base branch, the whole repo.
+        # On a pull request, scope the per-package gates to the directories this part changed; otherwise the whole repo.
         run: |
+          PATHS=.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch --no-tags origin "${{ github.base_ref }}"
             CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | awk -F/ '/^(packages|testing)\//{print $1"/"$2}' | sort -u)
-            FLAGS=""; for p in $CHANGED; do FLAGS="$FLAGS --workspace $p"; done
-            echo "ws=$FLAGS" >> "$GITHUB_OUTPUT"
+            if [ -n "$CHANGED" ]; then PATHS=$(echo $CHANGED); fi
           fi
-      - run: npm run lint ${{ steps.affected.outputs.ws }}
-      - run: npm run typecheck ${{ steps.affected.outputs.ws }}
+          echo "paths=$PATHS" >> "$GITHUB_OUTPUT"
+      - run: npx eslint ${{ steps.affected.outputs.paths }}
+      - run: npx prettier --check ${{ steps.affected.outputs.paths }}
+      - run: npm run typecheck
   scans-pass:
     # The dependency audit, static analysis and secret detection find nothing that is not fixed or accepted with an expiry (rule 14)
     name: scans-pass
