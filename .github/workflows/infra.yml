@@ -1,0 +1,46 @@
+# Generated from the IaC definition of done — never edited by hand (rule 27).
+name: infra
+on:
+  pull_request:
+    paths: ['infra/**']
+  push:
+    branches: [main]
+    paths: ['infra/**']
+jobs:
+  fmt:
+    # Every .tf file is formatted the one canonical way; a diff fails the job.
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive infra
+  validate:
+    # Every module initialises without a backend and validates: references resolve, types hold.
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: |
+          for dir in $(find infra -name "*.tf" -exec dirname {} \; | sort -u); do
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+          done
+  tflint:
+    # The linter catches what validate cannot: deprecated syntax, unused declarations, provider mistakes.
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: terraform-linters/setup-tflint@v4
+      - run: cd infra && tflint --init && tflint --recursive
+  policy-scan:
+    # The policy scanner holds the plan to security baselines before anything is ever applied.
+    name: policy-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra

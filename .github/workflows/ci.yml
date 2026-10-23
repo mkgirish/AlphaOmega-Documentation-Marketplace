@@ -1,160 +1,189 @@
+# Generated from the definition of done — never edited by hand (rule 27).
 name: ci
-
-# The twelve required checks from the Step 10 definition of done. Each job's name is
-# the exact check name branch protection requires. On the empty scaffold every gate
-# passes; builders replace the placeholder commands with real assertions as stories land.
 on:
   pull_request:
   push:
     branches: [main]
-
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   every-criterion-tested:
+    # Every acceptance criterion of the story has a test that fails without the change (rules 3 and 8)
     name: every-criterion-tested
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
-
+      - id: affected
+        # On a pull request, judge only the workspaces this part changed; on push to the base branch, the whole repo.
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | awk -F/ '/^(packages|testing)\//{print $1"/"$2}' | sort -u)
+            FLAGS=""; for p in $CHANGED; do FLAGS="$FLAGS --workspace $p"; done
+            echo "ws=$FLAGS" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm test ${{ steps.affected.outputs.ws }}
   coverage-at-90:
+    # Every package the change touches holds 90% line and branch coverage, measured per package (rule 5)
     name: coverage-at-90
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run coverage
-
+      - id: affected
+        # On a pull request, judge only the workspaces this part changed; on push to the base branch, the whole repo.
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | awk -F/ '/^(packages|testing)\//{print $1"/"$2}' | sort -u)
+            FLAGS=""; for p in $CHANGED; do FLAGS="$FLAGS --workspace $p"; done
+            echo "ws=$FLAGS" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm test ${{ steps.affected.outputs.ws }} -- --coverage
   lint-and-types-clean:
+    # ESLint, Prettier and tsc --noEmit pass with nothing suppressed that the change added (rule 21)
     name: lint-and-types-clean
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-
+      - id: affected
+        # On a pull request, judge only the workspaces this part changed; on push to the base branch, the whole repo.
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | awk -F/ '/^(packages|testing)\//{print $1"/"$2}' | sort -u)
+            FLAGS=""; for p in $CHANGED; do FLAGS="$FLAGS --workspace $p"; done
+            echo "ws=$FLAGS" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm run lint ${{ steps.affected.outputs.ws }}
+      - run: npm run typecheck ${{ steps.affected.outputs.ws }}
   scans-pass:
+    # The dependency audit, static analysis and secret detection find nothing that is not fixed or accepted with an expiry (rule 14)
     name: scans-pass
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run scan
-
   trace-crosses-every-call:
+    # Every request, call and job the change adds is a span under the caller’s trace, with its attributes redacted (rule 10)
     name: trace-crosses-every-call
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run check:trace
-
   playwright-follows-gherkin:
+    # Every screen the change touches has Playwright tests named for the story’s Feature and Scenario, with Given, When, Then in order, covering empty, loading and error (rule 8)
     name: playwright-follows-gherkin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run test:e2e
-
+      - run: npx playwright test
   axe-clean:
+    # axe-core finds no serious or critical violation at component or page level (rule 12)
     name: axe-clean
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run test:axe
-
   keyboard-pass-recorded:
+    # A manual keyboard and screen reader pass of every interactive component the change adds is recorded in the story (rule 12)
     name: keyboard-pass-recorded
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run check:keyboard-pass
-
   contracts-honoured:
+    # What the change provides passes its contract’s tests, and what it uses is built and tested against the contract, not the other side’s code (rules 7 and 23)
     name: contracts-honoured
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run test:contracts
-
   openapi-regenerated:
+    # The OpenAPI 3.1 specification regenerated from the routes shows no difference from the one committed (rule 7)
     name: openapi-regenerated
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run openapi
       - run: git diff --exit-code
-
   migration-committed:
+    # Every schema change is a generated SQL migration, reviewed and committed, never pushed to a live database (rule 18)
     name: migration-committed
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run check:migrations
-
   image-scanned:
+    # The image builds from digest-pinned bases, runs as non-root, has a bill of materials, and Trivy finds nothing high or critical (rule 16)
     name: image-scanned
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run scan:image

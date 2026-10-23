@@ -1,0 +1,32 @@
+# Generated from the acceptance check’s contract — never edited by hand (rule 27).
+name: acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      story:
+        description: The story whose scenarios to prove on the running system, e.g. ST-3
+        required: true
+        type: string
+jobs:
+  acceptance:
+    # Proves one story’s tagged scenarios against the composed stack and uploads the report, pass or fail.
+    name: acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: docker compose up -d --wait
+      - run: npx playwright test --grep "@story:${{ inputs.story }}" --reporter=json > playwright-results.json
+        continue-on-error: true
+      - run: npm run acceptance:report -- "${{ inputs.story }}"
+        if: always()
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-report
+          path: report.json
+          if-no-files-found: error
