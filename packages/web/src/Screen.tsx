@@ -7,6 +7,8 @@ const primaryButton = `${control} min-h-12 bg-primary px-4 py-3 font-semibold te
 
 export interface ScreenProps {
   readonly state: FormState
+  /** What the polite status region says once the form is back for the next visitor (ST-5). */
+  readonly announcement?: string
   readonly onChange: (field: FieldName, value: string) => void
   readonly onSubmit: () => void
   readonly onReset: () => void
@@ -14,7 +16,10 @@ export interface ScreenProps {
 
 // SCR-1 — the registration screen: one card holding either the four visitor fields and
 // Submit, or, once the API has answered 201, the confirmation in their place (ST-2).
-export function RegistrationScreen({ state, onChange, onSubmit, onReset }: ScreenProps) {
+export function RegistrationScreen({ state, announcement = '', onChange, onSubmit, onReset }: ScreenProps) {
+  // The region is already in the page, empty, while the confirmation shows, so the reset's
+  // words are spoken when they arrive rather than missed with a freshly inserted node (ST-5).
+  const announcing = state.status === 'editing' && announcement !== ''
   return (
     <main className="flex min-h-screen justify-center bg-canvas px-4 py-8 text-ink sm:items-center">
       <section id="registration-card" className="w-full max-w-[480px] rounded-xl border border-edge bg-surface p-6 sm:p-8">
@@ -24,6 +29,11 @@ export function RegistrationScreen({ state, onChange, onSubmit, onReset }: Scree
           <RegistrationForm state={state} onChange={onChange} onSubmit={onSubmit} />
         )}
       </section>
+      {state.status === 'confirmed' || announcing ? (
+        <p role="status" className="sr-only">
+          {announcing ? announcement : ''}
+        </p>
+      ) : null}
     </main>
   )
 }
