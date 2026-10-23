@@ -1,3 +1,4 @@
+import { confirmation } from '@app/shared'
 import { fields } from './fields.js'
 import type { FieldName, FormState } from './reducer.js'
 
@@ -7,14 +8,18 @@ const primaryButton = `${control} min-h-12 bg-primary px-4 py-3 font-semibold te
 
 export interface ScreenProps {
   readonly state: FormState
+  /** What the polite status region tells a screen reader, e.g. once the form is cleared (ST-5). */
+  readonly announcement?: string
   readonly onChange: (field: FieldName, value: string) => void
   readonly onSubmit: () => void
   readonly onReset: () => void
 }
 
 // SCR-1 — the registration screen: one card holding either the four visitor fields and
-// Submit, or, once the API has answered 201, the confirmation in their place (ST-2).
-export function RegistrationScreen({ state, onChange, onSubmit, onReset }: ScreenProps) {
+// Submit, or, once the API has answered 201, the confirmation in their place (ST-2). The
+// status region outside the card is already on the page, empty, while the confirmation
+// shows, so filling it when the form is cleared is announced (ST-5 AC-3).
+export function RegistrationScreen({ state, announcement, onChange, onSubmit, onReset }: ScreenProps) {
   return (
     <main className="flex min-h-screen justify-center bg-canvas px-4 py-8 text-ink sm:items-center">
       <section id="registration-card" className="w-full max-w-[480px] rounded-xl border border-edge bg-surface p-6 sm:p-8">
@@ -24,6 +29,11 @@ export function RegistrationScreen({ state, onChange, onSubmit, onReset }: Scree
           <RegistrationForm state={state} onChange={onChange} onSubmit={onSubmit} />
         )}
       </section>
+      {state.status === 'confirmed' || announcement ? (
+        <p role="status" className="sr-only">
+          {announcement}
+        </p>
+      ) : null}
     </main>
   )
 }
@@ -36,11 +46,11 @@ function Confirmation({ firstName, onReset }: { firstName: string; onReset: () =
         tabIndex={-1}
         className="rounded-md text-2xl font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
-        {firstName ? `Thank you, ${firstName}!` : 'Thank you!'}
+        {firstName ? confirmation.heading(firstName) : 'Thank you!'}
       </h1>
-      <p className="mt-2 text-muted">Your visit has been registered.</p>
+      <p className="mt-2 text-muted">{confirmation.body}</p>
       <button type="button" onClick={onReset} className={`${primaryButton} mt-6`}>
-        Register another visitor
+        {confirmation.registerAnother}
       </button>
     </>
   )
@@ -106,7 +116,7 @@ function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onRe
         })}
         {submitting ? (
           <p role="status" className="sr-only">
-            Submitting…
+            {confirmation.submitting}
           </p>
         ) : null}
         {state.status === 'saveFailed' ? (
@@ -125,7 +135,7 @@ function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onRe
                 aria-hidden="true"
                 className="inline-block size-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent motion-reduce:animate-none"
               />
-              Submitting…
+              {confirmation.submitting}
             </>
           ) : (
             'Submit'
