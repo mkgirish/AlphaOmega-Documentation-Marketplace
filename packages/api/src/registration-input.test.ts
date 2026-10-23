@@ -6,16 +6,16 @@ import { parseRegistration, type RegistrationField } from './registration-input.
 const VALID = { firstName: 'Jane', lastName: 'Doe', email: 'jane.doe@example.com', phone: '4155550132' }
 
 const MESSAGES = {
-  firstNameRequired: 'First name is required.',
+  firstNameRequired: 'Enter your first name.',
   firstNameTooLong: 'First name must be 100 characters or fewer.',
   firstNameInvalid: 'First name cannot contain control or text-direction characters.',
-  lastNameRequired: 'Last name is required.',
+  lastNameRequired: 'Enter your last name.',
   lastNameTooLong: 'Last name must be 100 characters or fewer.',
   lastNameInvalid: 'Last name cannot contain control or text-direction characters.',
-  emailRequired: 'Email is required.',
+  emailRequired: 'Enter an email like name@example.com.',
   emailInvalid: 'Enter a valid email address.',
   emailTooLong: 'Email must be 254 characters or fewer.',
-  phoneRequired: 'Phone number is required.',
+  phoneRequired: 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.',
   phoneInvalid: 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.',
 } as const
 
