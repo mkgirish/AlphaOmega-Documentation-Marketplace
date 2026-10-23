@@ -2,6 +2,7 @@
 // copy. packages/web and packages/api import these; neither defines its own (AD-3).
 import { z } from 'zod'
 import { formatUtcSeconds, normalise } from './format.js'
+import { requiredMessages } from './required.js'
 
 export const fieldLimits = {
   nameMax: 100,
@@ -11,21 +12,23 @@ export const fieldLimits = {
 /** Field-level messages. They name the rule, never the submitted value. */
 export const fieldMessages = {
   firstName: {
-    required: 'Enter your first name.',
+    required: requiredMessages.firstName,
     tooLong: `First name must be ${fieldLimits.nameMax} characters or fewer.`,
     invalid: 'First name contains characters that are not allowed.',
   },
   lastName: {
-    required: 'Enter your last name.',
+    required: requiredMessages.lastName,
     tooLong: `Last name must be ${fieldLimits.nameMax} characters or fewer.`,
     invalid: 'Last name contains characters that are not allowed.',
   },
   email: {
-    required: 'Enter your email address.',
+    required: requiredMessages.email,
     tooLong: `Email address must be ${fieldLimits.emailMax} characters or fewer.`,
     invalid: 'Enter a valid email address.',
   },
   phone: {
+    // Not requiredMessages.phone yet: that copy is still duplicated in packages/api/src and the
+    // web IF-2 fixture, so listing it here would trip the AD-3 guard until they import it.
     required: 'Enter your phone number.',
     invalid: 'Enter a 10-digit US or Canadian phone number.',
   },
