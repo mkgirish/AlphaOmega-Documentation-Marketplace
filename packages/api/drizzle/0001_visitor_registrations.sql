@@ -81,3 +81,9 @@ GRANT USAGE ON SCHEMA public TO registrations_app, registrations_reader;
 GRANT INSERT (first_name, last_name, email, phone, created_at) ON TABLE registrations TO registrations_app;
 --> statement-breakpoint
 GRANT SELECT ON TABLE registrations TO registrations_reader;
+--> statement-breakpoint
+DO $$
+BEGIN
+  EXECUTE format('GRANT USAGE ON SCHEMA %I TO registrations_app, registrations_reader', current_schema());
+END
+$$;

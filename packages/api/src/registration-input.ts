@@ -1,9 +1,10 @@
 // ST-2 — the IF-2 request rules for POST /api/registrations: NFC, trim, phone separators
 // stripped, then 1–100 code-point names free of control and bidi characters, an ASCII
-// email of at most 254 characters and a NANP number. The required and email messages come
-// from CMP-2; packages/shared has no four-field schema yet, so the remaining IF-2 rules
-// are kept here, in the one module the route uses.
-import { messages } from '@app/shared'
+// email of at most 254 characters and a NANP number. ST-3: a field that is missing, not a
+// string, or empty once trimmed is refused with its CMP-2 required message, so the API and
+// the screen say the same thing. The required and email messages come from CMP-2; the
+// remaining IF-2 rules are kept here, in the one module the route uses.
+import { fieldMessages, normalisePhone } from '@app/shared'
 
 export type RegistrationField = 'firstName' | 'lastName' | 'email' | 'phone'
 
@@ -23,12 +24,12 @@ const FIELDS: readonly RegistrationField[] = ['firstName', 'lastName', 'email', 
 const NAME_MAX = 100
 const EMAIL_MAX = 254
 
-// C0/C1 controls and the Unicode bidi marks, embeddings, overrides and isolates.
-const FORBIDDEN = /[\p{Cc}\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u
+// C0/C1 controls, the Unicode bidi marks, embeddings, overrides and isolates, and the
+// invisible zero-width space, word joiner and byte-order mark that trim() leaves behind.
+const FORBIDDEN = /[\p{Cc}\u061C\u200B\u200E\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/u
+const PHONE_SEPARATORS = /[ .()-]/g
 const EMAIL =
   /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
-const PHONE_SEPARATORS = /[ .()-]/g
-const NANP = /^[2-9]\d{2}[2-9]\d{6}$/
 
 function nameRule(label: string) {
   return (value: string): string | null => {
@@ -38,23 +39,19 @@ function nameRule(label: string) {
   }
 }
 
-const RULES: Readonly<
-  Record<RegistrationField, { label: string; normalise: (value: string) => string; check: (value: string) => string | null }>
-> = {
-  firstName: { label: 'First name', normalise: (v) => v.normalize('NFC').trim(), check: nameRule('First name') },
-  lastName: { label: 'Last name', normalise: (v) => v.normalize('NFC').trim(), check: nameRule('Last name') },
+const RULES: Readonly<Record<RegistrationField, { normalise: (value: string) => string; check: (value: string) => string | null }>> = {
+  firstName: { normalise: (v) => v.normalize('NFC').trim(), check: nameRule('First name') },
+  lastName: { normalise: (v) => v.normalize('NFC').trim(), check: nameRule('Last name') },
   email: {
-    label: 'Email',
     normalise: (v) => v.trim(),
     check: (v) => {
       if (v.length > EMAIL_MAX) return `Email must be ${EMAIL_MAX} characters or fewer.`
-      return EMAIL.test(v) ? null : messages.invalidEmail
+      return EMAIL.test(v) ? null : fieldMessages.email.invalid
     },
   },
   phone: {
-    label: 'Phone number',
     normalise: (v) => v.trim().replace(PHONE_SEPARATORS, ''),
-    check: (v) => (NANP.test(v) ? null : 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'),
+    check: (v) => (normalisePhone(v) === v ? null : 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'),
   },
 }
 
@@ -69,8 +66,13 @@ export function parseRegistration(body: unknown): RegistrationParse {
   for (const field of FIELDS) {
     const rule = RULES[field]
     const raw = record[field]
-    const normalised = typeof raw === 'string' ? rule.normalise(raw) : ''
-    const problem = normalised === '' ? messages.required(rule.label) : rule.check(normalised)
+    // Blank is judged before normalising, so a phone of only separators is invalid, not missing.
+    if (typeof raw !== 'string' || raw.trim() === '') {
+      fields[field] = [fieldMessages[field].required]
+      continue
+    }
+    const normalised = rule.normalise(raw)
+    const problem = rule.check(normalised)
     if (problem === null) value[field] = normalised
     else fields[field] = [problem]
   }

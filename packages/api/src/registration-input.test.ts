@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { fieldMessages } from '@app/shared'
 import { parseRegistration, type RegistrationField } from './registration-input.js'
 
 // ST-2 AC-1 and AC-3: the four fields are validated and normalised (NFC, trim, phone
@@ -6,16 +7,16 @@ import { parseRegistration, type RegistrationField } from './registration-input.
 const VALID = { firstName: 'Jane', lastName: 'Doe', email: 'jane.doe@example.com', phone: '4155550132' }
 
 const MESSAGES = {
-  firstNameRequired: 'First name is required.',
+  firstNameRequired: fieldMessages.firstName.required,
   firstNameTooLong: 'First name must be 100 characters or fewer.',
   firstNameInvalid: 'First name cannot contain control or text-direction characters.',
-  lastNameRequired: 'Last name is required.',
+  lastNameRequired: fieldMessages.lastName.required,
   lastNameTooLong: 'Last name must be 100 characters or fewer.',
   lastNameInvalid: 'Last name cannot contain control or text-direction characters.',
-  emailRequired: 'Email is required.',
+  emailRequired: fieldMessages.email.required,
   emailInvalid: 'Enter a valid email address.',
   emailTooLong: 'Email must be 254 characters or fewer.',
-  phoneRequired: 'Phone number is required.',
+  phoneRequired: fieldMessages.phone.required,
   phoneInvalid: 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.',
 } as const
 
