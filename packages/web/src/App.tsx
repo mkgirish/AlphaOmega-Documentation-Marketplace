@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useReducer, useRef } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { focusTargetFor, titleFor } from './effects.js'
 import { initialState, reducer } from './reducer.js'
 import { RegistrationScreen } from './Screen.js'
 import { createSubmit } from './submit.js'
 
 // SCR-1 — the registration screen as the kiosk runs it: the AD-7 reducer, the one submit
-// path to IF-2, and the title and focus that follow each transition.
+// path to IF-2, the title and focus that follow each transition, and the one announcement
+// that tells a screen reader the form was cleared for the next visitor (ST-5).
 export function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const submit = useMemo(() => createSubmit(dispatch), [])
   const previous = useRef(state.status)
+  const [announcement, setAnnouncement] = useState('')
 
   useEffect(() => {
     document.title = titleFor(state.status)
@@ -21,9 +23,19 @@ export function App() {
   return (
     <RegistrationScreen
       state={state}
-      onChange={(field, value) => dispatch({ type: 'change', field, value })}
-      onSubmit={() => void submit(state)}
-      onReset={() => dispatch({ type: 'reset' })}
+      announcement={announcement}
+      onChange={(field, value) => {
+        setAnnouncement('')
+        dispatch({ type: 'change', field, value })
+      }}
+      onSubmit={() => {
+        setAnnouncement('')
+        void submit(state)
+      }}
+      onReset={() => {
+        setAnnouncement('Form cleared for the next visitor')
+        dispatch({ type: 'reset' })
+      }}
     />
   )
 }
