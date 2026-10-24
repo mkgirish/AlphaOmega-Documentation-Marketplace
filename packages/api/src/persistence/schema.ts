@@ -1,4 +1,4 @@
-// CMP-4 — the registrations table as drizzle sees it; drizzle/0001_registration_details.sql
+// CMP-4 — the registrations table as drizzle sees it; drizzle/0001_visitor_registrations.sql
 // is the committed migration that creates it. created_at is text holding formatUtcSeconds()
 // output, so psql reads back exactly the ISO 8601 UTC whole seconds the API answered with.
 import { pgTable, text, uuid } from 'drizzle-orm/pg-core'

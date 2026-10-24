@@ -31,10 +31,19 @@ function positiveWholeNumber(env: NodeJS.ProcessEnv, name: string, fallback: num
   return Number(raw)
 }
 
+// An empty PORT counts as unset, so `-e PORT=` still starts on the default.
+function tcpPort(env: NodeJS.ProcessEnv): number {
+  const raw = env.PORT
+  if (raw === undefined || raw === '') return 3000
+  const port = /^[1-9]\d*$/.test(raw) ? Number(raw) : 0
+  if (port < 1 || port > 65535) throw new Error('PORT must be a whole number from 1 to 65535.')
+  return port
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
-    port: env.PORT ? Number(env.PORT) : 3000,
-    host: env.HOST ?? '0.0.0.0',
+    port: tcpPort(env),
+    host: env.HOST || '0.0.0.0',
     webRoot: DEFAULT_WEB_ROOT,
     databaseUrl: env.DATABASE_URL || undefined,
     rateLimits: {
