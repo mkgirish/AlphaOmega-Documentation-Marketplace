@@ -49,6 +49,27 @@
         }
       }
     },
+    "/favicon.ico": {
+      "get": {
+        "operationId": "getFavicon",
+        "summary": "Answers the browser's own favicon request from the container with nothing, so the page makes no failed request (ST-1 AC-7).",
+        "responses": {
+          "204": {
+            "description": "No icon; cached for a day."
+          },
+          "500": {
+            "description": "An unexpected failure; no detail is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/assets/{file}": {
       "get": {
         "operationId": "getAsset",

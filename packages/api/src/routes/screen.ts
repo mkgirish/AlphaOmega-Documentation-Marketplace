@@ -27,6 +27,9 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
 // Vite fingerprints every file under assets/, so a cached copy can never be stale.
 const IMMUTABLE = 'public, max-age=31536000, immutable'
 
+// Browsers ask for /favicon.ico unprompted; an empty answer keeps that request from failing (AC-7).
+const FAVICON_CACHE = 'public, max-age=86400'
+
 const healthSchema = {
   type: 'object',
   additionalProperties: false,
@@ -96,6 +99,8 @@ export function registerScreen(app: FastifyInstance, options: { webRoot: string 
     }
     return reply.type('text/html; charset=utf-8').send(page)
   })
+
+  app.get('/favicon.ico', async (_request, reply) => reply.code(204).header('cache-control', FAVICON_CACHE).send())
 
   app.get<{ Params: { '*': string } }>('/assets/*', async (request, reply) => {
     const requested = request.params['*']

@@ -48,6 +48,32 @@ async function connect(
   }
 }
 
+/** What stopOnSignals needs of the process: its signals and a way to exit. */
+export interface SignalSource {
+  once(signal: NodeJS.Signals, listener: () => void): unknown
+  exit(code: number): void
+}
+
+const STOP_SIGNALS: readonly NodeJS.Signals[] = ['SIGTERM', 'SIGINT']
+
+// tini forwards `docker stop`'s SIGTERM and Ctrl+C's SIGINT; the first one closes the
+// server and its store once, then exits 0 (a failed close exits 1, logged without detail).
+export function stopOnSignals(app: FastifyInstance, source: SignalSource = process): void {
+  let stopping = false
+  const stop = (): void => {
+    if (stopping) return
+    stopping = true
+    app.close().then(
+      () => source.exit(0),
+      (err: unknown) => {
+        logger.error({ code: (err as { code?: unknown }).code ?? 'unknown' }, 'shutdown.failed')
+        source.exit(1)
+      },
+    )
+  }
+  for (const signal of STOP_SIGNALS) source.once(signal, stop)
+}
+
 export async function start(config: Config = loadConfig()): Promise<FastifyInstance> {
   const store = await connect(config.databaseUrl)
   const app = buildApp({ webRoot: config.webRoot, repository: store.repository, rateLimits: config.rateLimits })
@@ -59,7 +85,7 @@ export async function start(config: Config = loadConfig()): Promise<FastifyInsta
 
 // dist/main.js is the container entrypoint; start only when run directly.
 if (process.argv[1]?.endsWith('main.js')) {
-  start().catch((err) => {
+  start().then(stopOnSignals, (err) => {
     logger.error(err)
     process.exit(1)
   })
