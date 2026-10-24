@@ -1,3 +1,4 @@
+import { confirmation } from '@app/shared'
 import { fields } from './fields.js'
 import type { FieldName, FormState } from './reducer.js'
 
@@ -36,11 +37,11 @@ function Confirmation({ firstName, onReset }: { firstName: string; onReset: () =
         tabIndex={-1}
         className="rounded-md text-2xl font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
-        {firstName ? `Thank you, ${firstName}!` : 'Thank you!'}
+        {firstName ? confirmation.heading(firstName) : 'Thank you!'}
       </h1>
-      <p className="mt-2 text-muted">Your visit has been registered.</p>
+      <p className="mt-2 text-muted">{confirmation.body}</p>
       <button type="button" onClick={onReset} className={`${primaryButton} mt-6`}>
-        Register another visitor
+        {confirmation.registerAnother}
       </button>
     </>
   )
@@ -106,7 +107,7 @@ function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onRe
         })}
         {submitting ? (
           <p role="status" className="sr-only">
-            Submitting…
+            {confirmation.submitting}
           </p>
         ) : null}
         {state.status === 'saveFailed' ? (
@@ -125,7 +126,7 @@ function RegistrationForm({ state, onChange, onSubmit }: Omit<ScreenProps, 'onRe
                 aria-hidden="true"
                 className="inline-block size-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent motion-reduce:animate-none"
               />
-              Submitting…
+              {confirmation.submitting}
             </>
           ) : (
             'Submit'
