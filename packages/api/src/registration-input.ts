@@ -3,7 +3,7 @@
 // email of at most 254 characters and a NANP number. The required and email messages come
 // from CMP-2; packages/shared has no four-field schema yet, so the remaining IF-2 rules
 // are kept here, in the one module the route uses.
-import { messages } from '@app/shared'
+import { messages, normalisePhone } from '@app/shared'
 
 export type RegistrationField = 'firstName' | 'lastName' | 'email' | 'phone'
 
@@ -28,7 +28,7 @@ const FORBIDDEN = /[\p{Cc}\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u
 const EMAIL =
   /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
 const PHONE_SEPARATORS = /[ .()-]/g
-const NANP = /^[2-9]\d{2}[2-9]\d{6}$/
+const TEN_DIGITS = /^\d{10}$/
 
 function nameRule(label: string) {
   return (value: string): string | null => {
@@ -54,7 +54,7 @@ const RULES: Readonly<
   phone: {
     label: 'Phone number',
     normalise: (v) => v.trim().replace(PHONE_SEPARATORS, ''),
-    check: (v) => (NANP.test(v) ? null : 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'),
+    check: (v) => (TEN_DIGITS.test(v) && normalisePhone(v) === v ? null : 'Enter a 10-digit US number without +1, e.g. (415) 555-0132.'),
   },
 }
 
