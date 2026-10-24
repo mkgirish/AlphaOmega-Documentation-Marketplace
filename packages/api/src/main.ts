@@ -48,11 +48,50 @@ async function connect(
   }
 }
 
-export async function start(config: Config = loadConfig()): Promise<FastifyInstance> {
+/** Where shutdown signals come from; the process itself unless a test supplies its own. */
+export interface SignalSource {
+  on(signal: NodeJS.Signals, listener: () => void): unknown
+  removeListener(signal: NodeJS.Signals, listener: () => void): unknown
+}
+
+export interface StartOptions {
+  readonly signals?: SignalSource
+  readonly exit?: (code: number) => void
+}
+
+const SHUTDOWN_SIGNALS: readonly NodeJS.Signals[] = ['SIGTERM', 'SIGINT']
+
+// `docker stop` reaches node as SIGTERM through tini: finish in-flight requests, close the
+// store, and exit 0. The first signal wins and later ones are absorbed while it drains;
+// the listeners go when the server closes.
+function closeOnSignals(app: FastifyInstance, signals: SignalSource, exit: (code: number) => void): void {
+  let closing = false
+  const shutdown = (): void => {
+    if (closing) return
+    closing = true
+    app.close().then(
+      () => exit(0),
+      () => exit(1),
+    )
+  }
+  for (const signal of SHUTDOWN_SIGNALS) signals.on(signal, shutdown)
+  app.addHook('onClose', async () => {
+    for (const signal of SHUTDOWN_SIGNALS) signals.removeListener(signal, shutdown)
+  })
+}
+
+export async function start(config: Config = loadConfig(), options: StartOptions = {}): Promise<FastifyInstance> {
   const store = await connect(config.databaseUrl)
   const app = buildApp({ webRoot: config.webRoot, repository: store.repository, rateLimits: config.rateLimits })
   app.addHook('onClose', store.close)
-  await app.listen({ port: config.port, host: config.host })
+  closeOnSignals(app, options.signals ?? process, options.exit ?? ((code) => process.exit(code)))
+  try {
+    await app.listen({ port: config.port, host: config.host })
+  } catch (err) {
+    // A port already taken: release the signal listeners and the store before failing.
+    await app.close()
+    throw err
+  }
   logger.info({ port: config.port }, 'registration-api listening')
   return app
 }
